@@ -1,0 +1,84 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/taskfile.json
+version: '3'
+
+includes:
+  docker:
+    taskfile: ./tasks/docker.yml
+    internal: true
+  go:
+    taskfile: ./tasks/golang.yml
+    internal: true
+  swagger:
+    taskfile: ./tasks/swagger.yml
+    internal: true
+  test:
+    taskfile: ./tasks/test.yml
+    internal: true
+
+vars:
+  GO_RESTFUL_FOLDER: .
+
+tasks:
+
+# tasks for setting and running service locally
+  local-clean:
+    desc: "Cleans up all docker container."
+    cmds:
+      - task: docker:docker-compose-down
+
+  local-setup:
+    desc: "Setup local db, pubsub emulator and runs migration."
+    cmds:
+      - task: docker:local-db-build
+      - task: docker:local-migration-build
+
+  run:service:
+    desc: "Run employee-service service locally."
+    dir: "{{.GO_RESTFUL_FOLDER}}"
+    cmds:
+      - cp ./docs/swagger.json ./swagger.json
+      - defer: rm -f ./swagger.json
+      - task: go:run
+        vars:
+          GO_PROJECT_FOLDER: "{{.GO_RESTFUL_FOLDER}}"
+          ASYNC_CMD: "{{.ASYNC_CMD}}"
+
+# tasks for generating and serving swagger documentation
+  swagger-generate:
+    desc: "Generate swagger docs."
+    cmds:
+      - task: swagger:check-install
+      - task: swagger:generate
+      - task: swagger:validate
+      # - task: swagger:convert-to-3
+
+  swagger-serve:
+    desc: "Serve swagger doc."
+    cmds:
+      - task: swagger:serve
+
+# tasks for code testing and linting
+  lint-all:
+      desc: "Run golangci-lint for code linting."
+      dir: "{{.GO_RESTFUL_FOLDER}}"
+      cmds:
+        - task: go:lint
+          vars:
+            GO_PROJECT_FOLDER: "{{.GO_RESTFUL_FOLDER}}"
+        - task: go:lint
+          vars:
+            GO_PROJECT_FOLDER: "models"
+        - task: go:lint
+          vars:
+            GO_PROJECT_FOLDER: "pkg"
+
+  test-unit:
+      desc: Run Unit Tests
+      cmds:
+        - task: test:pkg
+          vars:
+            GO_PROJECT_FOLDER: "models"
+            FOLDERS: "..."
+            BUILD_TAGS: "-tags unit"
+        - task: test:models

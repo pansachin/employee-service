@@ -1,0 +1,74 @@
+---
+app:
+  # Name of the application.
+  name: employee-service
+  # Environment of the application.
+  env: local
+  # EnforceHeaders is a boolean value that determines whether
+  # to enforce headers.
+  enforceHeaders: false
+  # TLS is a boolean value that determines whether to use
+  # Transport Layer Security.
+  tls: false
+  # Function is the type of function the application will
+  # perform.
+  function: restful
+web:
+  # MaxHeaderBytes controls the maximum number of bytes the
+  # server will read parsing the request header's keys and
+  # values, including the request line. It does not limit the
+  # size of the request body.
+  # If zero, DefaultMaxHeaderBytes is used.
+  maxHeaderBytes: 0
+  # ReadHeaderTimeout is the amount of time allowed to read
+  # request headers.
+  readHeaderTimeout: 5s
+  # ReadTimeout is the maximum duration for reading the entire
+  # request, including the body.
+  readTimeout: 5s
+  # WriteTimeout is the maximum duration before timing out
+  # writes of the response. It is reset whenever a new
+  # request's header is read
+  writeTimeout: 10s
+  # IdleTimeout is the maximum amount of time to wait for the
+  # next request when keep-alives are enabled.
+  idleTimeout: 120s
+  # ShutdownTimeout is the maximum duration the server will
+  # wait before shutting down.
+  shutdownTimeout: 20s
+  # Server Host.
+  apiHost: 0.0.0.0
+  # Server Port.
+  apiPort: '7800'
+log:
+  # Debug determines the level of loging i.e DEBUG/INFO
+  # If unset level will default to INFO
+  debug: true
+  # JSON decided whether log will be printed in JSON/Plain Text format
+  # If unset logging will be deault with Plain Text format
+  json: false
+  # IF enabled it prints the filename and line number from where log is generated
+  # If unset source will not been seen in the logs
+  source: true
+db:
+  # Database Type.
+  type: mysql
+  # Database User.
+  user: root
+  # Database Password.
+  password: root
+  # Database Host.
+  host: localhost
+  # Database Port.
+  port: 7801
+  # Database Name.
+  dbName: employee
+  # MaxIdleConns is the maximum number of connections in the
+  # idle connection pool.
+  maxIdleConns: 0
+  # MaxOpenConns is the maximum number of open connections to
+  # the database.
+  maxOpenConns: 0
+  # DisableTLS is a boolean value that determines whether to
+  # disable Transport Layer Security.
+  disableTLS: true

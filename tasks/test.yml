@@ -1,0 +1,45 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/taskfile.json
+version: 3
+
+includes:
+  go:
+    taskfile: ./golang.yml
+    internal: true
+
+tasks:
+  pkg:
+      desc: "Run Unit Tests for pkg."
+      dir: "pkg"
+      cmds:
+        - task: go:test
+          vars:
+            GO_PROJECT_FOLDER: "./../pkg"
+            FOLDERS: "..."
+            BUILD_TAGS: "-tags unit"
+        - go test ./... -coverprofile coverage.out
+        - go tool cover -html=coverage.out -o ../test-cov-reports/pkg.html
+
+  models:
+      desc: "Run Unit Tests for models."
+      dir: "models"
+      cmds:
+        - task: go:test
+          vars:
+            GO_PROJECT_FOLDER: "./../models"
+            FOLDERS: "..."
+            BUILD_TAGS: "-tags unit -race -p 1"
+        - go test ./... -coverprofile coverage.out
+        - go tool cover -html=coverage.out -o  ../test-cov-reports/models.html
+
+  restful:
+      desc: "Run Unit Tests for restful."
+      dir: "services/employee-service"
+      cmds:
+        - task: go:test
+          vars:
+            GO_PROJECT_FOLDER: "./../services/employee-service"
+            FOLDERS: "..."
+            BUILD_TAGS: "-tags unit"
+        - go test ./... -coverprofile coverage.out
+        - go tool cover -html=coverage.out -o ../test-cov-reports/employee-service.html

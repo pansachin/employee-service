@@ -1,0 +1,611 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>db: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/pansachin/employee-service/models/employee/db/db.go (66.7%)</option>
+				
+				<option value="file1">github.com/pansachin/employee-service/models/employee/employee.go (66.1%)</option>
+				
+				<option value="file2">github.com/pansachin/employee-service/models/employee/models.go (93.8%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">// Package db for database functions
+package db
+
+import (
+        "context"
+        "fmt"
+        "log/slog"
+        "net/http"
+        "strings"
+        "sync"
+        "time"
+
+        "github.com/jmoiron/sqlx"
+
+        "github.com/pansachin/employee-service/pkg/database"
+)
+
+// Store holds details for basic database needs
+type Store struct {
+        log          *slog.Logger
+        tr           database.Transactor
+        db           sqlx.ExtContext
+        rwmux        *sync.RWMutex
+        isWithinTran bool
+}
+
+// NewStore constructs a data for api access.
+func NewStore(log *slog.Logger, db *sqlx.DB, rwmux *sync.RWMutex) Store <span class="cov8" title="1">{
+        return Store{
+                log:   log,
+                tr:    db,
+                db:    db,
+                rwmux: rwmux,
+        }
+}</span>
+
+// WithinTran runs passes function and do commit/rollback at the end.
+func (s Store) WithinTran(ctx context.Context, fn func(sqlx.ExtContext) error) error <span class="cov8" title="1">{
+        if s.isWithinTran </span><span class="cov0" title="0">{
+                return fn(s.db)
+        }</span>
+        <span class="cov8" title="1">s.rwmux.Lock()
+        err := database.WithinTran(ctx, s.log, s.tr, fn)
+        s.rwmux.Unlock()
+
+        return err</span>
+}
+
+// Tran return new Store with transaction in it.
+func (s Store) Tran(tx sqlx.ExtContext) Store <span class="cov8" title="1">{
+        return Store{
+                log:          s.log,
+                tr:           s.tr,
+                db:           tx,
+                isWithinTran: true,
+        }
+}</span>
+
+// -----------------------------------------------------------------------
+// Database Query Repository
+// -----------------------------------------------------------------------
+
+// Create inserts a new requesting into the database.
+func (s Store) Create(ctx context.Context, rs Employee) (database.DBResults, error) <span class="cov8" title="1">{
+        const q = `
+        INSERT INTO employee
+                (name, position, created_on, updated_on)
+        VALUES
+                (:name, :position, :created_on, :updated_on)`
+
+        res, err := database.NamedExecContext(ctx, s.log, s.db, q, rs)
+        if err != nil </span><span class="cov0" title="0">{
+                if strings.Contains(err.Error(), "Duplicate entry") </span><span class="cov0" title="0">{
+                        return database.DBResults{}, database.NewError(database.ErrDBDuplicatedEntry, http.StatusConflict)
+                }</span>
+                <span class="cov0" title="0">return database.DBResults{}, fmt.Errorf("inserting employee: %w", err)</span>
+        }
+
+        <span class="cov8" title="1">return res, nil</span>
+}
+
+// Update replaces a employee record in the database.
+func (s Store) Update(ctx context.Context, rs Employee) (database.DBResults, error) <span class="cov8" title="1">{
+        const q = `
+        UPDATE
+                employee
+        SET 
+                name = :name,
+                position = :position,
+                updated_on = :updated_on
+        WHERE
+                id = :id`
+
+        res, err := database.NamedExecContext(ctx, s.log, s.db, q, rs)
+        if err != nil </span><span class="cov0" title="0">{
+                if strings.Contains(err.Error(), "Duplicate entry") </span><span class="cov0" title="0">{
+                        return database.DBResults{}, database.NewError(database.ErrDBDuplicatedEntry, http.StatusConflict)
+                }</span>
+                <span class="cov0" title="0">return database.DBResults{}, fmt.Errorf("updating Employee ID[%s]: %w", rs.ID, err)</span>
+        }
+
+        <span class="cov8" title="1">return res, nil</span>
+}
+
+// Delete removes a employee from the database.
+func (s Store) Delete(ctx context.Context, id string, now time.Time) (database.DBResults, error) <span class="cov8" title="1">{
+        data := struct {
+                ID        string    `db:"id"`
+                DeletedOn time.Time `db:"deleted_on"`
+        }{
+                ID:        id,
+                DeletedOn: now,
+        }
+
+        const q = `
+        UPDATE
+                employee
+        SET
+                deleted_on = :deleted_on
+        WHERE
+                id = :id`
+
+        res, err := database.NamedExecContext(ctx, s.log, s.db, q, data)
+        if err != nil </span><span class="cov0" title="0">{
+                return database.DBResults{}, fmt.Errorf("deleting employee id[%s]: %w", id, err)
+        }</span>
+
+        <span class="cov8" title="1">return res, nil</span>
+}
+
+// Query retrieves a list of existing employee from the database.
+func (s Store) Query(ctx context.Context, pagi database.Pagination) ([]Employee, error) <span class="cov8" title="1">{
+        q := database.PaginationQuery(pagi, `
+        SELECT
+                id,
+            name,
+            position,
+            created_on,
+            updated_on,
+            deleted_on
+        FROM
+                employee
+        WHERE
+                deleted_on is null
+        ORDER BY
+                :sort :direction,
+                id :direction
+        LIMIT
+                :page,:per_page`)
+
+        // Slice to hold results
+        var res []Employee
+        if err := database.NamedQuerySlice(ctx, s.log, s.db, q, pagi, &amp;res); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("selecting employee: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return res, nil</span>
+}
+
+// QueryByID retrieves a list of existing requesting sources from the database.
+func (s Store) QueryByID(ctx context.Context, id string) (Employee, error) <span class="cov8" title="1">{
+        data := struct {
+                ID string `db:"id"`
+        }{ID: id}
+
+        const q = `
+        SELECT
+                id,
+                name,
+                position,
+                created_on,
+                updated_on,
+                deleted_on
+        FROM
+                employee
+        WHERE
+                id = :id
+                and deleted_on is null`
+
+        // Slice to hold results
+        var res Employee
+        if err := database.NamedQueryStruct(ctx, s.log, s.db, q, data, &amp;res); err != nil </span><span class="cov8" title="1">{
+                return Employee{}, fmt.Errorf("selecting by id[%q]: %w", id, err)
+        }</span>
+
+        <span class="cov8" title="1">return res, nil</span>
+}
+
+// UnDelete restores a deleted employee from the database.
+func (s Store) UnDelete(ctx context.Context, id string, now time.Time) (database.DBResults, error) <span class="cov0" title="0">{
+        data := struct {
+                ID        string    `db:"id"`
+                UpdatedOn time.Time `db:"updated_on"`
+                DeletedOn time.Time `db:"deleted_on"`
+        }{
+                ID:        id,
+                UpdatedOn: now,
+                DeletedOn: time.Time{},
+        }
+
+        const q = `
+        UPDATE
+                employee
+        SET
+                updated_on = :updated_on,
+                deleted_on = null
+        WHERE
+                id = :id`
+
+        res, err := database.NamedExecContext(ctx, s.log, s.db, q, data)
+        if err != nil </span><span class="cov0" title="0">{
+                return database.DBResults{}, fmt.Errorf("restoring employee id[%s]: %w", id, err)
+        }</span>
+
+        <span class="cov0" title="0">return res, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">// Package Employee for employee handler functions
+package employee
+
+import (
+        "context"
+        "errors"
+        "fmt"
+        "log/slog"
+        "strings"
+        "sync"
+        "time"
+
+        "github.com/jmoiron/sqlx"
+
+        "github.com/pansachin/employee-service/models/employee/db"
+        "github.com/pansachin/employee-service/pkg/database"
+        "github.com/pansachin/employee-service/pkg/validate"
+)
+
+// Set of error variables for CRUD operations.
+var (
+        ErrNotFound     = errors.New("employee not found")
+        ErrInvalidID    = errors.New("ID is not in its proper form")
+        ErrInvalidAlias = errors.New("alias is not in its proper form")
+)
+
+// Core manages the set of APIs for employee access
+type Core struct {
+        store db.Store
+}
+
+// NewCore constructs a core for employee api access.
+func NewCore(log *slog.Logger, sqlxDB *sqlx.DB, rwmux *sync.RWMutex) Core <span class="cov8" title="1">{
+        return Core{
+                store: db.NewStore(log, sqlxDB, rwmux),
+        }
+}</span>
+
+// -----------------------------------------------------------------------
+// CRUD Methods
+// -----------------------------------------------------------------------
+
+// Create inserts a new employee into the database
+func (c Core) Create(ctx context.Context, rs NewEmployee, now time.Time) (Employee, error) <span class="cov8" title="1">{
+        if err := validate.Check(rs); err != nil </span><span class="cov8" title="1">{
+                return Employee{}, fmt.Errorf("validating data: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">dbRS := db.Employee{
+                Name:      strings.TrimSpace(rs.Name),
+                Position:  strings.TrimSpace(rs.Position),
+                CreatedOn: now,
+                UpdatedOn: now,
+        }
+
+        // This provides an example of how to execute a transaction if required.
+        tran := func(tx sqlx.ExtContext) error </span><span class="cov8" title="1">{
+                res, err := c.store.Tran(tx).Create(ctx, dbRS)
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+                <span class="cov8" title="1">dbRS.ID = fmt.Sprintf("%d", res.LastInsertID)
+                return nil</span>
+        }
+
+        <span class="cov8" title="1">if err := c.store.WithinTran(ctx, tran); err != nil </span><span class="cov0" title="0">{
+                return Employee{}, fmt.Errorf("tran: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return toEmployee(dbRS), nil</span>
+}
+
+// Update replaces a employee document in the database.
+func (c Core) Update(ctx context.Context, id string, urs UpdateEmployee, now time.Time) error <span class="cov8" title="1">{
+        if err := validate.Check(urs); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">if err := validate.CheckID(id); err != nil </span><span class="cov0" title="0">{
+                return ErrInvalidID
+        }</span>
+
+        <span class="cov8" title="1">dbRS, err := c.store.QueryByID(ctx, id)
+        if err != nil </span><span class="cov8" title="1">{
+                if errors.Is(err, database.ErrDBNotFound) </span><span class="cov8" title="1">{
+                        return ErrNotFound
+                }</span>
+                <span class="cov0" title="0">return fmt.Errorf("updating employee id[%s]: %w", id, err)</span>
+        }
+
+        <span class="cov8" title="1">isEmpty := true
+        if urs.Position != nil </span><span class="cov8" title="1">{
+                dbRS.Position = strings.TrimSpace(*urs.Position)
+                isEmpty = false
+        }</span>
+        // No changes were made - don't touch the DB
+        <span class="cov8" title="1">if isEmpty </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov8" title="1">dbRS.UpdatedOn = now
+
+        _, err = c.store.Update(ctx, dbRS)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("update id[%s]: %w", id, err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// Delete removes a employee from the database.
+func (c Core) Delete(ctx context.Context, id string, now time.Time) error <span class="cov8" title="1">{
+        if err := validate.CheckID(id); err != nil </span><span class="cov0" title="0">{
+                return ErrInvalidID
+        }</span>
+
+        <span class="cov8" title="1">_, err := c.store.QueryByID(ctx, id)
+        if err != nil </span><span class="cov0" title="0">{
+                if errors.Is(err, database.ErrDBNotFound) </span><span class="cov0" title="0">{
+                        return ErrNotFound
+                }</span>
+                <span class="cov0" title="0">return fmt.Errorf("undeleting employee id[%s]: %w", id, err)</span>
+        }
+
+        <span class="cov8" title="1">_, err = c.store.Delete(ctx, id, now)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("delete id[%s]: %w", id, err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// Query retrieves a list of existing records from the database
+func (c Core) Query(ctx context.Context, pagi database.Pagination) ([]Employee, error) <span class="cov8" title="1">{
+        res, err := c.store.Query(ctx, pagi)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("query: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return toEmployeeSlice(res), nil</span>
+}
+
+// QueryByID retrieves a single records from the database by id
+func (c Core) QueryByID(ctx context.Context, id string) (Employee, error) <span class="cov8" title="1">{
+        if err := validate.CheckID(id); err != nil </span><span class="cov0" title="0">{
+                return Employee{}, ErrInvalidID
+        }</span>
+
+        <span class="cov8" title="1">res, err := c.store.QueryByID(ctx, id)
+        if err != nil </span><span class="cov8" title="1">{
+                if errors.Is(err, database.ErrDBNotFound) </span><span class="cov8" title="1">{
+                        return Employee{}, ErrNotFound
+                }</span>
+                <span class="cov0" title="0">return Employee{}, fmt.Errorf("query: %w", err)</span>
+        }
+
+        <span class="cov8" title="1">return toEmployee(res), nil</span>
+}
+
+// UnDelete restore a deleted employee from the database.
+func (c Core) UnDelete(ctx context.Context, id string, now time.Time) error <span class="cov0" title="0">{
+        if err := validate.CheckID(id); err != nil </span><span class="cov0" title="0">{
+                return ErrInvalidID
+        }</span>
+
+        <span class="cov0" title="0">_, err := c.store.UnDelete(ctx, id, now)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("employee id[%s]: %w", id, err)
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package employee
+
+import (
+        "context"
+        "fmt"
+        "time"
+        "unsafe"
+
+        "github.com/pansachin/employee-service/models/employee/db"
+)
+
+// Employee holds the employee information.
+//
+//swagger:model Employee
+type Employee struct {
+        // Primary Key
+        // example: 1
+        ID string `json:"id"`
+        // Employee Name
+        // example: Sachin Prasad
+        Name string `json:"name"`
+        // Employee designation
+        // example: Senior Software Engineer
+        Position string `json:"position"`
+        // Database created value
+        // example: 2021-05-25T00:53:16.535668Z
+        CreatedOn time.Time `json:"created_on"`
+        // Database last updated value
+        // example: 2021-05-25T00:53:16.535668Z
+        UpdatedOn time.Time `json:"updated_on"`
+        // Database soft delete value
+        // example: 2021-05-25T00:53:16.535668Z
+        // swagger:ignore
+        DeletedOn *time.Time `json:"deleted_on,omitempty"`
+}
+
+// NewEmployee defines the model of adding new employee.
+//
+//swagger:model NewEmployee
+type NewEmployee struct {
+        // Name of the employee
+        // in: string
+        // required: true
+        // example: Sachin Prasad
+        Name string `json:"name" validate:"required,notblank"`
+        // Employee Designamtion
+        // in: string
+        // example: Senior Software Engineer
+        Position string `json:"position"`
+}
+
+// UpdateEmployee defines what information may be provided to
+// modify an existing Employee. All fields are optional
+// so clients can send just the fields they want changed. It uses pointer
+// fields so we can differentiate between a field that was not provided
+// and a field that was provided as explicitly blank. Normally we do not
+// want to use pointers to basic types but we make exceptions around
+// marshalling/unmarshalling.
+//
+//swagger:model UpdateEmployee
+type UpdateEmployee struct {
+        // Employee Designamtion
+        // in: string
+        // example: Staff Software Engineer
+        Position *string `json:"position"`
+}
+
+// =============================================================================
+
+func toEmployee(dbRS db.Employee) Employee <span class="cov8" title="1">{
+        p := (*Employee)(unsafe.Pointer(&amp;dbRS))
+        return *p
+}</span>
+
+func toEmployeeSlice(dbSRs []db.Employee) []Employee <span class="cov8" title="1">{
+        rs := make([]Employee, len(dbSRs))
+        for i, dbSR := range dbSRs </span><span class="cov8" title="1">{
+                rs[i] = toEmployee(dbSR)
+        }</span>
+        <span class="cov8" title="1">return rs</span>
+}
+
+//------------------------------------------------------------------------
+// Fake data generators
+//------------------------------------------------------------------------
+
+// GenerateFakeData return an array for NewEmployees
+func (nrt NewEmployee) GenerateFakeData(num int) []NewEmployee <span class="cov8" title="1">{
+        var data []NewEmployee
+        for i := 0; i &lt; num; i++ </span><span class="cov8" title="1">{
+                data = append(data, nrt.fakeData(i+1))
+        }</span>
+        <span class="cov8" title="1">return data</span>
+}
+
+// fakeData creates the fake record
+func (nrt NewEmployee) fakeData(counter int) NewEmployee <span class="cov8" title="1">{
+        return NewEmployee{
+                Name:     "Sachin Prasad",
+                Position: "Senior Software Engineer",
+        }
+}</span>
+
+// Seed runs create methods from an array of new values
+func (c Core) Seed(ctx context.Context, data []NewEmployee) error <span class="cov8" title="1">{
+        now := time.Now().UTC()
+        for _, ns := range data </span><span class="cov8" title="1">{
+                if _, err := c.Create(ctx, ns, now); err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("error seeding status: %w", err)
+                }</span>
+        }
+
+        <span class="cov8" title="1">return nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

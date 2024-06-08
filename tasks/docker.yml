@@ -1,0 +1,29 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/taskfile.json
+
+version: "3"
+
+tasks:
+  local-db-build:
+    desc: "Setup local DB."
+    cmds:
+      - docker-compose -f docker-compose.yml up -d db
+
+  local-migration-build:
+    desc: "Runs flyway migration."
+    cmds:
+      - docker-compose -f docker-compose.yml up -d flyway
+      - docker wait employee_service_flyway # wait for migrations to run
+      - |
+        EXIT_CODE=$(docker inspect employee_service_flyway --format=json | jq '.[0].State.ExitCode')
+        [[ "$EXIT_CODE" == 0 ]] || echo "Error running migration"
+
+  docker-compose-down:
+    desc: "Execute docker-compose down command"
+    cmds:
+      - docker-compose down
+
+  docker-compose-up:
+    desc: "Execute docker-compose up command"
+    cmds:
+      - docker-compose up

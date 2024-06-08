@@ -1,0 +1,35 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/taskfile.json
+version: 3
+
+tasks:
+
+  run:
+    summary: |
+      Run program's entrypoint for local development.
+
+      A GO_PROJECT_FOLDER variable is used as the workdir
+      for the new process
+    preconditions:
+      - test ! -z "{{.GO_PROJECT_FOLDER}}"
+    env:
+      APP_ENV: local
+      FUNCTION_TARGET: "{{.FUNCTION_TARGET}}"
+    dir: "{{.GO_PROJECT_FOLDER}}"
+    cmds:
+      - "{{.ASYNC_CMD}} go run main.go"
+
+  test:
+    desc: "Run specific tests."
+    preconditions:
+      - test ! -z "{{.GO_PROJECT_FOLDER}}"
+    dir: "{{.GO_PROJECT_FOLDER}}"
+    cmds:
+      - go mod tidy
+      - go test ./{{.FOLDERS}} -count=1 {{.BUILD_TAGS}}
+
+  lint:
+      desc: Run golangci-lint in specifig folder
+      dir: "{{.GO_PROJECT_FOLDER}}"
+      cmds:
+        - golangci-lint run -E goimports -v

@@ -1,0 +1,39 @@
+version: '3'
+services:
+
+  flyway:
+    image: flyway/flyway:10.8
+    container_name: employee_service_flyway
+    command: -url=jdbc:mysql://db/employee?allowPublicKeyRetrieval=true -user=root -password=root -connectRetries=60 -connectRetriesInterval=2 migrate
+    volumes:
+      - ./data/migrations:/flyway/sql
+    depends_on:
+      - db
+
+  db:
+    platform: linux/x86_64
+    image: mysql:8
+    container_name: package_index_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: employee
+    ports:
+      - "7801:3306"
+
+  app:
+    container_name: employee-service
+    build:
+      dockerfile: Dockerfile.local
+      context: .
+    ports:
+      - "7800:7800"
+      - "8800:8800"
+    volumes:
+      - ./:/app
+    depends_on:
+      - db
+    links:
+      - db

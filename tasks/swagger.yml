@@ -1,0 +1,42 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/taskfile.json
+
+version: "3"
+
+tasks:
+  install:
+    desc: "Installs swagger binary."
+    cmds:
+      - go install github.com/go-swagger/go-swagger/cmd/swagger@latest
+      - ln -s ~/go/bin/swagger /usr/local/bin/swagger 
+
+  check-install:
+    desc: "Checks if swagger binary present."
+    cmds:
+      - task: install
+    status:
+      - which swagger
+
+  serve:
+    desc: "Serve the generated document."
+    dir: "{{.ROOT_PROJECT_FOLDER}}"
+    cmds:
+      - swagger serve ./docs/swagger.json
+
+  generate:
+    desc: "Generates swagger specs."
+    dir: "{{.GO_RESTFUL_FOLDER}}"
+    cmds:
+      - mkdir -p ./docs
+      - swagger generate spec -o ./docs/swagger.json
+
+  validate:
+    desc: "Validate swagger schema."
+    cmds:
+      - swagger validate ./docs/swagger.json
+
+  convert-to-3:
+    desc: "Converts to Swagger 3 schema."
+    cmds:
+      - sed -i '' -e 's/localhost/localhost:7800/g' ./docs/swagger.json
+      - curl -X POST "https://converter.swagger.io/api/convert" -H  "accept:application/json" -H  "Content-Type:application/json" --data-binary '@docs/swagger.json' > docs/openapi.json

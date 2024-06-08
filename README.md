@@ -6,6 +6,7 @@ Employee service deals with the employee data. It provides the following functio
 - Get all employees
 - Update an employee
 - Delete an employee(Soft delete)
+- Restore an deleted employee
 
 ## Tools/Software used:
 - Taskfile:

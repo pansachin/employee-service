@@ -55,7 +55,7 @@ This will start serving Swagger documentation locally.
 ```bash
 task local-setup
 ```
-This will cerate a MySql database and Pubsubemulator as docker containers and generate all db schemas using flyway tool.
+This will cerate a MySql database as docker containers and generate all db schemas using flyway tool.
 
 ### Run Local Package Index Service
 ```bash
@@ -68,4 +68,4 @@ This will run employee-service service locally.
 ```bash
 task local-clean
 ```
-Cleans up db and Pubsub emulator docker containers.
+Cleans up db docker containers.

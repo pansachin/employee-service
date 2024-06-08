@@ -26,6 +26,26 @@ Employee service deals with the employee data. It provides the following functio
 ### Prerequisite
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) must be running on the system.
 
+
+### Local Setup
+```bash
+task local-setup
+```
+This will cerate a MySql database as docker containers and generate all db schemas using flyway tool.
+
+### Run Local Package Index Service
+```bash
+task run:service
+```
+This will run employee service  locally.
+
+
+### Local Clean
+```bash
+task local-clean
+```
+Cleans up db docker containers.
+
 ### Local Unit Test
 ```bash
 task test-unit
@@ -50,22 +70,3 @@ This will generate the API document with example for employee-service.
 task swagger-serve
 ```
 This will start serving Swagger documentation locally.
-
-### Local Setup
-```bash
-task local-setup
-```
-This will cerate a MySql database as docker containers and generate all db schemas using flyway tool.
-
-### Run Local Package Index Service
-```bash
-task run:service
-```
-This will run employee-service service locally.
-
-
-### Local Clean
-```bash
-task local-clean
-```
-Cleans up db docker containers.
